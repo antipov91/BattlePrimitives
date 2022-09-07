@@ -1,5 +1,5 @@
 using BattlePrimitives.StateMachine;
-using System;
+using System.Linq;
 using UnityEngine;
 
 namespace BattlePrimitives
@@ -16,21 +16,6 @@ namespace BattlePrimitives
             public override void Activate()
             {
                 reloadDuration = 0f;
-                context.OnMobExited += MobExitHandle;
-                context.targetAttackMob.OnDestroyed += DestroyedHandle;
-            }
-
-            private void DestroyedHandle(Mob other)
-            {
-                ChangeState();
-            }
-
-            private void MobExitHandle(Mob otherMob)
-            {
-                if (otherMob == context.targetAttackMob)
-                {
-                    ChangeState();
-                }
             }
 
             public override void Update()
@@ -49,25 +34,43 @@ namespace BattlePrimitives
                 }
 
                 reloadDuration = 1f / context.attackRate;
-                var enemyHealth = context.targetAttackMob.GetComponent<Health>();
-                enemyHealth.CurrentHealth -= context.damage;
-
-                if (enemyHealth.CurrentHealth <= 0)
-                    ChangeState();
+                context.targetAttackMob.Health -= context.damage;
             }
 
-            private void ChangeState()
+            public override void LateUpdate()
             {
-                if (context.leaderMob != null)
-                    stateMachine.CurrentState = context.followState;
-                else
-                    stateMachine.CurrentState = context.searchState;
-            }
+                if (context.targetAttackMob.Health <= 0)
+                {
+                    var enemies = context.neighboringMobs.Where(x => x.leaderMob != context && x != context.leaderMob && x.Health > 0);
+                    
+                    if (enemies.Count() == 1)
+                        context.targetAttackMob = enemies.First();
+                    else if (enemies.Count() == 0)
+                    {
+                        if (context.leaderMob != null)
+                            stateMachine.CurrentState = context.followState;
+                        else
+                            stateMachine.CurrentState = context.searchState;
+                    }
+                    else
+                    {
+                        var bestEnemy = enemies.First();
+                        var bestDistance = Vector3.Distance(context.transform.position, bestEnemy.transform.position);
+                        foreach (var enemy in enemies)
+                        {
+                            var distance = Vector3.Distance(context.transform.position, enemy.transform.position);
+                            if (distance < bestDistance)
+                            {
+                                bestDistance = distance;
+                                bestEnemy = enemy;
+                            }
+                        }
+                        context.targetAttackMob = bestEnemy;
+                    }
+                }
 
-            public override void Deactivate()
-            {
-                context.OnMobExited -= MobExitHandle;
-                context.targetAttackMob.OnDestroyed -= DestroyedHandle;
+                if (context.leaderMob != null && context.leaderMob.Health <= 0)
+                    context.leaderMob = null;
             }
         }
     }

@@ -18,30 +18,29 @@ namespace BattlePrimitives
 
             private void MobEnterHandle(Mob otherMob)
             {
-                if (context.isLeader || context.isSlave)
-                {
-                    if (context.leaderMob == otherMob || otherMob.leaderMob == context)
-                        return;
+                if (context.leaderMob == otherMob || otherMob.leaderMob == context)
+                    return;
 
-                    context.targetAttackMob = otherMob;
-                    stateMachine.CurrentState = context.attackState;
-                }
+                context.targetAttackMob = otherMob;
+                stateMachine.CurrentState = context.attackState;
             }
 
             public override void Update()
             {
-                if (context.neighboringMobs.Count > 1)
-                {
-                    context.targetAttackMob = context.neighboringMobs.Find(x => x.leaderMob != context && x != context.leaderMob);
-                    if (context.targetAttackMob != null)
-                        stateMachine.CurrentState = context.attackState;
-                }
-
                 if (Vector3.Distance(context.transform.position, context.leaderMob.transform.position) < followThreshold)
                     return;
 
                 context.transform.position = Vector3.MoveTowards(context.transform.position, context.leaderMob.transform.position, Time.deltaTime * context.Velocity);
                 context.transform.forward = context.leaderMob.transform.position - context.transform.position;
+            }
+
+            public override void LateUpdate()
+            {
+                if (context.leaderMob != null && context.leaderMob.Health <= 0)
+                {
+                    context.leaderMob = null;
+                    stateMachine.CurrentState = context.searchState;
+                }
             }
 
             public override void Deactivate()

@@ -21,7 +21,7 @@ namespace BattlePrimitives
 
             private void MobEnterHandle(Mob otherMob)
             {
-                if (context.isLeader || context.isSlave)
+                if (context.isLeader || context.isSlave || otherMob.isLeader || otherMob.isSlave)
                 {
                     if (context.leaderMob == otherMob || otherMob.leaderMob == context)
                         return;
@@ -35,19 +35,11 @@ namespace BattlePrimitives
                     otherMob.isSlave = true;
                     otherMob.leaderMob = context;
                     otherMob.stateMachine.CurrentState = otherMob.followState;
-                    context.OnDestroyed += otherMob.OnLeaderDestroyed;
                 }
             }
 
             public override void Update()
             {
-                if (context.neighboringMobs.Count > 1)
-                {
-                    context.targetAttackMob = context.neighboringMobs.Find(x => x.leaderMob != context && x != context.leaderMob);
-                    if (context.targetAttackMob != null)
-                        stateMachine.CurrentState = context.attackState;
-                }
-
                 if (isGoal == false)
                 {
                     target = context.transform.position + new Vector3(Random.Range(-context.searchDistance, context.searchDistance), 0f, Random.Range(-context.searchDistance, context.searchDistance));

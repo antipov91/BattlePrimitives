@@ -9,15 +9,27 @@ namespace BattlePrimitives
     {
         public float Velocity { get { return velocity; } }
 
+        [SerializeField] private int health = 10;
         [SerializeField] private int damage = 1;
         [SerializeField] private float attackRate = 1f;
         [SerializeField] private float velocity = 1f;
         [SerializeField] private string wallsTag = "Walls";
         [SerializeField] private float searchDistance = 5f;
 
+        public int Health
+        {
+            get { return health; }
+            set
+            {
+                health = value;
+
+                if (health <= 0)
+                    Destroy(gameObject);
+            }
+        }
+
         private Action<Mob> OnMobEntered;
         private Action<Mob> OnMobExited;
-        private Action<Mob> OnDestroyed;
 
         private Mob targetAttackMob;
 
@@ -49,21 +61,18 @@ namespace BattlePrimitives
 
         private void OnTriggerEnter(Collider other)
         {
-            if (this == other)
-                return;
-
             if (other.gameObject.TryGetComponent<Mob>(out var mob))
             {
-                neighboringMobs.Add(mob);
-                OnMobEntered?.Invoke(mob);
+                if (neighboringMobs.Contains(mob) == false)
+                {
+                    neighboringMobs.Add(mob);
+                    OnMobEntered?.Invoke(mob);
+                }
             } 
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (this == other)
-                return;
-
             if (other.gameObject.TryGetComponent<Mob>(out var mob))
             {
                 neighboringMobs.Remove(mob);
@@ -76,15 +85,9 @@ namespace BattlePrimitives
             stateMachine.CurrentState.Update();
         }
 
-        private void OnDestroy()
+        private void LateUpdate()
         {
-            OnDestroyed?.Invoke(this);
-        }
-
-        private void OnLeaderDestroyed(Mob mob)
-        {
-            leaderMob = null;
-            stateMachine.CurrentState = searchState;
+            stateMachine.CurrentState.LateUpdate();
         }
     }
 }
